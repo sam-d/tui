@@ -15,3 +15,9 @@ With this approach, composition is trivial using ```append```.
 # Compatibility
 
 This library has only been briefly tested using Chez scheme and ```gnome-terminal```
+
+# Inspiration
+
+This library was inspired by a [blog post](https://xn--rpa.cc/irl/term.html) and
+a [reddit post](https://www.reddit.com/r/scheme/comments/13amz3j/how_to_make_text_based_game_loop_in_stty_raw_mode/)
+

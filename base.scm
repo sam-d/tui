@@ -1,22 +1,25 @@
 #!r6rs
 (library (tui base)
   (export draw%
-		  style
-		  color
-		  at
-		  cursor-up
-		  cursor-down
-		  cursor-back
-		  cursor-forward
-		  reset%
-		  clear-screen%
-		  clear-screen-forward%
-		  clear-screen-backward%
-		  enable-alternative-buffer%
-		  disable-alternative-buffer%)
+	  style
+	  color
+	  at
+	  repeat
+	  cursor-up
+	  cursor-down
+	  cursor-back
+	  cursor-forward
+	  save-cursor
+	  restore-cursor
+	  reset%
+	  clear-screen%
+	  clear-screen-forward%
+	  clear-screen-backward%
+	  enable-alternative-buffer%
+	  disable-alternative-buffer%)
   (import (rnrs base)
-		  (rnrs control)
-		  (rnrs io ports))
+	  (rnrs control)
+	  (rnrs io ports))
 
   ;define everything through macros
   ; draw is a syntactic extension that expects a port and a list of characters and will output each character (some of which migh represent ANSI control sequences to port. Port is optional and defaults to (current-output-port)
@@ -76,6 +79,16 @@
     (syntax-rules ()
   	((_ row col text) `(#\esc #\[ ,@(string->list (number->string row)) #\; ,@(string->list (number->string col)) #\H ,@(if (list? text) text (if (string? text) (string->list text) (assertion-violation 'at "text must be a list of characters or a string")))))))
   
+  ;repeat the character (or character list) n times. If repeat is used to repeat a styled or color object, exclude the style/color codes from the repetition as they are idempotent.
+  (define-syntax repeat
+    (syntax-rules (at style color)
+      ((_ n char) (let ((res (do ((i n (- i 1)) 
+				   (lst '() (cons char lst)))
+    				  ((= i 0) lst)))) 
+		    (if (list? char) (apply append res) res)))
+      ((_ n (style e1 ... e2)) ((style e1 ...) (repeat n e2)))
+      ((_ n (color e1 ... e2)) ((color e1 ...) (repeat n e2)))))
+
   ;move cursor
   (define-syntax cursor-up
     (syntax-rules ()
@@ -96,14 +109,23 @@
     (syntax-rules ()
   	((_) '(#\esc #\[ #\1 #\D))
   	((_ n) `(#\esc #\[ ,@(string->list (number->string n)) #\D))))
+
+  (define-syntax save-cursor
+    (syntax-rules ()
+      ((_) '(#\esc #\[ #\s))))
+
+  (define-syntax restore-cursor
+    (syntax-rules ()
+      ((_) '(#\esc #\[ #\u))))
+
   ;;functions to clear the screen
   (define-syntax optional-port
     (syntax-rules ()
-  	((_ name lst) 
-  	 (define name
-  		(case-lambda (() (name (current-output-port)))
-  					 ((port) (draw% lst port)))))))
-  	 
+      ((_ name lst) 
+       (define name
+  	 (case-lambda (() (name (current-output-port)))
+  		      ((port) (draw% lst port)))))))
+  
   ;resets the terminal/port by sending the ANSI reset sequence #\esc #\c
   (optional-port reset% '(#\esc #\c))
   ;clears complete screen

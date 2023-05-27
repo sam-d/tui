@@ -82,12 +82,17 @@
   ;repeat the character (or character list) n times. If repeat is used to repeat a styled or color object, exclude the style/color codes from the repetition as they are idempotent.
   (define-syntax repeat
     (syntax-rules (at style color)
+      ((_ n (style e1 ... e2)) (style e1 ... (repeat n e2)))
+      ((_ n (color e1 ... e2)) (color e1 ... (repeat n e2)))
       ((_ n char) (let ((res (do ((i n (- i 1)) 
 				   (lst '() (cons char lst)))
     				  ((= i 0) lst)))) 
-		    (if (list? char) (apply append res) res)))
-      ((_ n (style e1 ... e2)) ((style e1 ...) (repeat n e2)))
-      ((_ n (color e1 ... e2)) ((color e1 ...) (repeat n e2)))))
+		    (if (list? char) (apply append res) res)))))
+
+  ;this assumes that the cursor always ends up at the bottom-right most position of a shape
+  (define-syntax overlay
+    (syntax-rules ()
+      ((_ offset-x offset-y e1 e2) `(,@e1 ,@(save-cursor) ,@(cursor-up offset-y) ,@(cursor-back offset-x) ,@e2 ,@(restore-cursor)))))
 
   ;move cursor
   (define-syntax cursor-up
